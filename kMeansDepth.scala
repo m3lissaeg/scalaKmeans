@@ -18,18 +18,35 @@ object HelloWorld {
         randomArray = randomArray:+ number
       }
      randomArray   
-  }
+   }
 
-  def distance(p: Array[Int],  q: Array[Int]): Double = {
+   def partialDistance(p: Array[Int],  q: Array[Int], s: Int, f: Int, minLength: Int, depth: Int, maxDepth: Int): Double = {
     var dist = 0.0
-    var i = 0
-    while(i< p.length){
-        val d = p(i) - q(i)
-        dist = d*d
-        i = i + 1
+    var i = s
+    // l = Length of the interval 
+    l = f - s
+
+    if( depth >= maxDepth){
+        // Sequential
+        while(i< f){
+            val d = p(i) - q(i)
+            dist = d*d
+            i = i + 1
+        }  // return dist
+        dist 
+    }else{
+        // Concurrent using recursivity
+        val middle = s + (f-s)/2
+        var firstMiddle = partialDistance(p, q, s, m)
+        var secondMiddle = partialDistance(p, q, m, f)
+        val (x, y) = parallel(partialDistance(p,q, s, m, depth+1, maxDepth), partialDistance(p, q, m, f, depth+1, maxDepth) )
+        x+y
     }
-    sqrt(dist)
-  }
+   }
+
+   def euclDistance( p: Array[Int],  q: Array[Int] ): Double = {
+       partialDistance(p, q, 0, p.length, 0, 5)    
+   }
 
 
   def main(args: Array[String]): Unit = {
@@ -37,9 +54,10 @@ object HelloWorld {
     val size = 10
     val limit = 100
     var pointP = generateRandomArray(size, limit)
+    // println(pointP.mkString(" "))
+
+
     
-    // Return the generated array:
-    println(pointP.mkString(" "))
   }
 
 }
