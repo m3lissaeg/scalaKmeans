@@ -31,6 +31,14 @@ object KmeansConcurrent {
     }
   }
  
+  def divideArrays(a: Array[Double], b: Array[Int]): Array[Double] ={
+    var r =Array.ofDim[Double](a.length)
+     for( i <- 0 to a.length -1 ){
+     r(i) = a(i) / b(i).toDouble
+    }
+    r
+  }
+
   def generateRandomArray(pointDimension: Int, limit: Int ): Array[Int]={      
     var randomArray = new Array[Int](0)
       // Define random generator
@@ -117,13 +125,28 @@ object KmeansConcurrent {
     }
     (nearestCentroid, nearestDistance)
    }
+  // Esta funcion actualiza los valores para los centroides. Devuleve una matriz de centroides
+  def updateCentroidsMatrix(k: Int, howManyPointsBelongToCentroid: Array[Int], nearestToCentroidClassification: ArrayBuffer[(Int, Double)], pointsP: Array[ Array[Int]], pointD: Int): Array[ Array[Int]]  ={
+    var newCentroids = Array.ofDim[Double](k, pointD)
+    var acumCoord = Array.ofDim[Int](k, pointD)
 
+    for( i <- 0 to pointsP.length -1 ){
+      var j = nearestToCentroidClassification(i)._1 // a que cluster pertenece el punto
+
+      for( s <- 0 to pointD -1 ){
+        acumCoord(j)(s) = acumCoord(j)(s) + pointsP(i)(s)
+      }
+    }
+    acumCoord
+
+
+  }
 
   def main(args: Array[String]): Unit = {
     //10 elements, numbers (1, 100)
     val popuS = 15
-    val limit = 100
-    val pointD = 10
+    val limit = 10
+    val pointD = 6
     val k = 3
     var pointsP = pointsPopulation(popuS, limit, pointD  )
     val centroidsMatrix = chooseCentroids(pointsP, k, pointD)
@@ -153,9 +176,13 @@ object KmeansConcurrent {
 
     // Calculate the average - error average
     for( i <- 0 to nearestCentroidDistanceAcum.length -1 ){
-     averageDistanceToCentroid(i) = nearestCentroidDistanceAcum(i) / howManyPointsBelongToCentroid(i).toDouble
+     averageDistanceToCentroid = divideArrays( nearestCentroidDistanceAcum, howManyPointsBelongToCentroid ) 
     }
 
+  var newCentroids = updateCentroidsMatrix(k, howManyPointsBelongToCentroid, nearestToCentroidClassification, pointsP, pointD)
+
+  println("New Centroids")
+  printMatrix(newCentroids, pointD)
      
   }
 
