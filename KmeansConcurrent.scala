@@ -16,6 +16,15 @@ object KmeansConcurrent {
           println      
     }
   }
+
+  def printMatrixDouble(matrix: Array[ Array[Double]] , pointDimension: Int ): Unit={
+    for (i <- 0 to matrix.length -1){
+      for ( j<-0 until pointDimension-1){
+           print( matrix(i)(j) + " ")     
+          }
+          println      
+    }
+  }
   def printMatrixBuffer(matrix: ArrayBuffer[ Array[Int]] , pointDimension: Int ): Unit={
     for (i <- 0 to matrix.length -1){
       for ( j<-0 until pointDimension-1){
@@ -39,6 +48,10 @@ object KmeansConcurrent {
     r
   }
 
+  def divideArrayByInt(a: Array[Double], b: Int): Array[Double]={
+    var r = a.map(_ /b.toDouble)
+    r
+  }
   def generateRandomArray(pointDimension: Int, limit: Int ): Array[Int]={      
     var randomArray = new Array[Int](0)
       // Define random generator
@@ -126,27 +139,30 @@ object KmeansConcurrent {
     (nearestCentroid, nearestDistance)
    }
   // Esta funcion actualiza los valores para los centroides. Devuleve una matriz de centroides
-  def updateCentroidsMatrix(k: Int, howManyPointsBelongToCentroid: Array[Int], nearestToCentroidClassification: ArrayBuffer[(Int, Double)], pointsP: Array[ Array[Int]], pointD: Int): Array[ Array[Int]]  ={
+  def updateCentroidsMatrix(k: Int, howManyPointsBelongToCentroid: Array[Int], nearestToCentroidClassification: ArrayBuffer[(Int, Double)], pointsP: Array[ Array[Int]], pointD: Int): Array[ Array[Double]]  ={
     var newCentroids = Array.ofDim[Double](k, pointD)
-    var acumCoord = Array.ofDim[Int](k, pointD)
+    var acumCoord = Array.ofDim[Double](k, pointD)
 
     for( i <- 0 to pointsP.length -1 ){
       var j = nearestToCentroidClassification(i)._1 // a que cluster pertenece el punto
 
       for( s <- 0 to pointD -1 ){
-        acumCoord(j)(s) = acumCoord(j)(s) + pointsP(i)(s)
+        acumCoord(j)(s) = acumCoord(j)(s) + pointsP(i)(s).toDouble
       }
     }
-    acumCoord
-
-
+    println("Coordenadas Sumatoria antes de promedio")
+    printMatrixDouble(acumCoord, pointD)
+    for( i <- 0 to k -1 ){
+    newCentroids(i) = divideArrayByInt(acumCoord(i), howManyPointsBelongToCentroid(i)) 
+    }
+    newCentroids
   }
 
   def main(args: Array[String]): Unit = {
     //10 elements, numbers (1, 100)
     val popuS = 15
-    val limit = 10
-    val pointD = 6
+    val limit = 100
+    val pointD = 10
     val k = 3
     var pointsP = pointsPopulation(popuS, limit, pointD  )
     val centroidsMatrix = chooseCentroids(pointsP, k, pointD)
@@ -182,7 +198,7 @@ object KmeansConcurrent {
   var newCentroids = updateCentroidsMatrix(k, howManyPointsBelongToCentroid, nearestToCentroidClassification, pointsP, pointD)
 
   println("New Centroids")
-  printMatrix(newCentroids, pointD)
+  printMatrixDouble(newCentroids, pointD)
      
   }
 
