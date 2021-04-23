@@ -52,25 +52,25 @@ object KmeansConcurrent {
     var r = a.map(_ /b.toDouble)
     r
   }
-  def generateRandomArray(pointDimension: Int, limit: Int ): Array[Int]={      
-    var randomArray = new Array[Int](0)
+  def generateRandomArray(pointDimension: Int, limit: Int ): Array[Double]={      
+    var randomArray = new Array[Double](0)
       // Define random generator
       val r = scala.util.Random
       for (i <- 1 to pointDimension){
-        var number = r.nextInt(limit)
+        var number = r.nextInt(limit).toDouble
         //println(number)
         randomArray = randomArray:+ number
       }
      randomArray   
   }
 
-  def pointsPopulation(populationSize: Int, limit: Int, pointDimension: Int  ): Array[ Array[Int]]={
-       var matrixOfPoints = Array.ofDim[Int](populationSize, pointDimension)
+  def pointsPopulation(populationSize: Int, limit: Int, pointDimension: Int  ): Array[ Array[Double]]={
+       var matrixOfPoints = Array.ofDim[Double](populationSize, pointDimension)
       val r = scala.util.Random
 
        for (i <- 0 to populationSize -1){
          for (j <- 0 to pointDimension -1){
-            var number = r.nextInt(limit)
+            var number = r.nextInt(limit).toDouble
             matrixOfPoints(i)(j) =  number
 
          }
@@ -78,8 +78,8 @@ object KmeansConcurrent {
       matrixOfPoints
   }    
 
-  def chooseCentroids(matrixOfPoints:Array[ Array[Int]], k: Int, pointDimension:Int): Array[ Array[Int]]={
-    var matrixOfCentroids = Array.ofDim[Int](k, pointDimension)
+  def chooseCentroids(matrixOfPoints:Array[ Array[Double]], k: Int, pointDimension:Int): Array[ Array[Double]]={
+    var matrixOfCentroids = Array.ofDim[Double](k, pointDimension)
       val r = scala.util.Random
       for (i <- 0 to k-1){
         var n = r.nextInt(matrixOfPoints.length)
@@ -90,7 +90,7 @@ object KmeansConcurrent {
   }
 
 
-   def partialDistance(p: Array[Int],  q: Array[Int], s: Int, f: Int, minLength: Int): Double = {
+   def partialDistance(p: Array[Double],  q: Array[Double], s: Int, f: Int, minLength: Int): Double = {
     var dist = 0.0
     var i = s
     // l = Length of the interval 
@@ -118,11 +118,11 @@ object KmeansConcurrent {
     }
    }
 
-   def euclDistance( p: Array[Int],  q: Array[Int] ): Double = {
+   def euclDistance( p: Array[Double],  q: Array[Double] ): Double = {
        partialDistance(p, q, 0, p.length, 10)    
    }
 
-   def nearestCentroid(p: Array[Int], c: Array[Array[Int]]): (Int, Double) = {
+   def nearestCentroid(p: Array[Double], c: Array[Array[Double]]): (Int, Double) = {
     //    p : punto, c: centroides  
     var nearestDistance = euclDistance(p, c(0))
     var nearestCentroid = 0
@@ -139,7 +139,7 @@ object KmeansConcurrent {
     (nearestCentroid, nearestDistance)
    }
   // Esta funcion actualiza los valores para los centroides. Devuleve una matriz de centroides
-  def updateCentroidsMatrix(k: Int, howManyPointsBelongToCentroid: Array[Int], nearestToCentroidClassification: ArrayBuffer[(Int, Double)], pointsP: Array[ Array[Int]], pointD: Int): Array[ Array[Double]]  ={
+  def updateCentroidsMatrix(k: Int, howManyPointsBelongToCentroid: Array[Int], nearestToCentroidClassification: ArrayBuffer[(Int, Double)], pointsP: Array[ Array[Double]], pointD: Int): Array[ Array[Double]]  ={
     var newCentroids = Array.ofDim[Double](k, pointD)
     var acumCoord = Array.ofDim[Double](k, pointD)
 
@@ -150,56 +150,87 @@ object KmeansConcurrent {
         acumCoord(j)(s) = acumCoord(j)(s) + pointsP(i)(s).toDouble
       }
     }
-    println("Coordenadas Sumatoria antes de promedio")
-    printMatrixDouble(acumCoord, pointD)
+    // println("Coordenadas Sumatoria antes de promedio")
+    // printMatrixDouble(acumCoord, pointD)
     for( i <- 0 to k -1 ){
     newCentroids(i) = divideArrayByInt(acumCoord(i), howManyPointsBelongToCentroid(i)) 
     }
     newCentroids
   }
 
-  def main(args: Array[String]): Unit = {
+  def nearestToCentroidClassificationF(centroidsMatrix: Array[ Array[Double]]): ArrayBuffer[(Int, Double)]={
+    // calculate the nearest centroid for each point in pointsPopulation (pointsP)
+    var nearestToCentroidClassification =  ArrayBuffer[(Int, Double)]()
+    for (i <- 0 to pointsP.length -1){
+      var neCe = nearestCentroid( pointsP(i), centroidsMatrix)
+      println(neCe)
+      nearestToCentroidClassification += neCe
+    }
+    nearestToCentroidClassification
+  }
+
+  def totalError( nearestCentroidDistanceAcum: Array[Double] , howManyPointsBelongToCentroid:  Array[Int] ): Double={
+    var acum = 0.0
+    var averageDistanceToCentroid = Array.ofDim[Double](k)
+    for( i <- 0 to nearestCentroidDistanceAcum.length -1 ){
+     averageDistanceToCentroid = divideArrays( nearestCentroidDistanceAcum, howManyPointsBelongToCentroid ) 
+    }
+    for( i <- 0 to averageDistanceToCentroid.length -1 ){
+     acum = acum + averageDistanceToCentroid(i)
+    }
+    acum
+  }
+
+  // Global  variables
     //10 elements, numbers (1, 100)
     val popuS = 15
     val limit = 100
     val pointD = 10
     val k = 3
     var pointsP = pointsPopulation(popuS, limit, pointD  )
-    val centroidsMatrix = chooseCentroids(pointsP, k, pointD)
-    var nearestToCentroidClassification =  ArrayBuffer[(Int, Double)]()
+    val epsilon = 2.0
+
+  def main(args: Array[String]): Unit = {
+    var centroidsMatrix = chooseCentroids(pointsP, k, pointD)
     var nearestCentroidDistanceAcum = Array.ofDim[Double](k)
-    var howManyPointsBelongToCentroid = Array.ofDim[Int](k)
-    var averageDistanceToCentroid = Array.ofDim[Double](k)
-    
+    var howManyPointsBelongToCentroid = Array.ofDim[Int](k)    
     println(" Matrix of points")
-    printMatrix(pointsP, pointD)
+    printMatrixDouble(pointsP, pointD)
     println(" Matrix of centroids")
-    printMatrix(centroidsMatrix, pointD)
-    // calculate the nearest centroid for each point in pointsPopulation (pointsP)
-    for (i <- 0 to pointsP.length -1){
-      var neCe = nearestCentroid( pointsP(i), centroidsMatrix)
-      println(neCe)
-      nearestToCentroidClassification += neCe
+    printMatrixDouble(centroidsMatrix, pointD)
+
+    var sseAnt = 0.0
+    var done = false
+    // Iterations  
+    while(!done){
+      // calculate the nearest centroid for each point in pointsPopulation (pointsP)
+      var nearestToCentroidClassification = nearestToCentroidClassificationF(centroidsMatrix)
+        // printBufferTuple(nearestToCentroidClassification)
+      for( i <- 0 to nearestToCentroidClassification.length -1 ){
+        var j = nearestToCentroidClassification(i)._1 // Obtengo la posicion en la que debo sumar
+        nearestCentroidDistanceAcum(j) = nearestCentroidDistanceAcum(j) + nearestToCentroidClassification(i)._2
+        howManyPointsBelongToCentroid(j) = howManyPointsBelongToCentroid(j) + 1
+      }
+      println(nearestCentroidDistanceAcum.mkString(" "))
+      println(howManyPointsBelongToCentroid.mkString(" "))
+
+      // Calculate the average - error average
+      var sse = totalError( nearestCentroidDistanceAcum, howManyPointsBelongToCentroid )
+      println("Average error sum")
+      println(sse)      
+      centroidsMatrix = updateCentroidsMatrix(k, howManyPointsBelongToCentroid, nearestToCentroidClassification, pointsP, pointD)
+      println("New Centroids")
+      printMatrixDouble(centroidsMatrix, pointD)
+      println("-------------------------------------------------")
+
+      var error = (sse - sseAnt).abs
+
+      if (error < epsilon){
+        done = true
+      }
+      sseAnt = sse
+      
     }
-      // printBufferTuple(nearestToCentroidClassification)
-     for( i <- 0 to nearestToCentroidClassification.length -1 ){
-       var j = nearestToCentroidClassification(i)._1 // Obtengo la posicion en la que debo sumar
-       nearestCentroidDistanceAcum(j) = nearestCentroidDistanceAcum(j) + nearestToCentroidClassification(i)._2
-       howManyPointsBelongToCentroid(j) = howManyPointsBelongToCentroid(j) + 1
-     }
-     println(nearestCentroidDistanceAcum.mkString(" "))
-     println(howManyPointsBelongToCentroid.mkString(" "))
-
-    // Calculate the average - error average
-    for( i <- 0 to nearestCentroidDistanceAcum.length -1 ){
-     averageDistanceToCentroid = divideArrays( nearestCentroidDistanceAcum, howManyPointsBelongToCentroid ) 
-    }
-
-  var newCentroids = updateCentroidsMatrix(k, howManyPointsBelongToCentroid, nearestToCentroidClassification, pointsP, pointD)
-
-  println("New Centroids")
-  printMatrixDouble(newCentroids, pointD)
-     
   }
 
 }
