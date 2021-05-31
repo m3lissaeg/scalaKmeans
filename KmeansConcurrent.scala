@@ -147,14 +147,15 @@ object KmeansConcurrent {
     }else{
         // Concurrent using recursivity
         val middle = s + (f-s)/2
-        var firstMiddle = partialDistance(p, q, s, middle, 10)
-        var secondMiddle = partialDistance(p, q, middle+1, f, 10)
-        var r = firstMiddle + secondMiddle
+        // var firstMiddle = partialDistance(p, q, s, middle, minLength)
+        // var secondMiddle = partialDistance(p, q, middle+1, f, minLength)
+        // var r = firstMiddle + secondMiddle
         // return r
-        r         
+        // r         
         // or
-        // val (x, y) = parallel(partialDistance(p,q, s, middle), partialDistance(p, q, middle, f) )
-        // x+y
+        val (x, y) = parallel(partialDistance(p,q, s, middle, minLength), partialDistance(p, q, middle+1, f, minLength) )
+        var z = x+y
+        z
     }
    }
 
