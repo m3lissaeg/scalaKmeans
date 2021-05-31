@@ -1,4 +1,10 @@
 import scala.collection.mutable.ArrayBuffer
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.RecursiveTask;
+import java.util.concurrent.ForkJoinWorkerThread
+
+import scala.util.DynamicVariable
 // K-means clustering is a clustering algorithm that aims to partition n observations into k clusters.
     // There are 3 steps:
     // Initialization – K initial “means” (centroids) are generated at random
@@ -9,6 +15,59 @@ import scala.collection.mutable.ArrayBuffer
 
 object KmeansConcurrent {
 
+  // Threads
+  val forkJoinPool = new ForkJoinPool
+
+  abstract class TaskScheduler{
+    def schedule[T](body: => T): ForkJoinTask[T]
+    def parallel[A, B](taskA: => A, taskB: => B): (A, B)={
+      val right = task {
+        taskB
+      }
+      val left = taskA
+      (left, right.join())
+    }
+  }
+
+  class DefaultTaskScheduler extends TaskScheduler {
+
+    def schedule[T](body: => T): ForkJoinTask[T] = {
+      val t = new RecursiveTask[T]{
+        def compute: T = body
+      }
+
+      Thread.currentThread match {
+        case wt: ForkJoinWorkerThread => 
+          t.fork()
+        case _ =>
+          forkJoinPool.execute(t)
+      }
+      t
+    }
+  }
+
+  val scheduler = new DynamicVariable[TaskScheduler](new DefaultTaskScheduler)
+
+  def task[T](body: => T): ForkJoinTask[T] = {
+    scheduler.value.schedule(body)
+  }
+
+  def parallel[A, B](taskA: => A, taskB: => B): (A, B) = {
+    scheduler.value.parallel(taskA, taskB)
+  }
+
+  def parallel[A, B, C, D](taskA: => A, taskB: => B, taskC: => C, taskD: => D): (A, B, C, D) = {
+    
+    val ta = task {taskA}
+    val tb = task {taskB}
+    val tc = task {taskC}
+    val td = task {taskD}
+    (ta.join(), tb.join(), tc.join(), td.join())
+
+  }
+
+
+  // K-means 
   def printMatrixDouble(matrix: Array[ Array[Double]]  ): Unit={
     for (i <- 0 to matrix.length -1){
       for ( j<-0 until pointD -1){
@@ -81,7 +140,7 @@ object KmeansConcurrent {
         // Serial
         while(i< f){
             val d = p(i) - q(i)
-            dist = d*d
+            dist += d*d
             i = i + 1
         }  // return dist
         dist 
@@ -89,7 +148,7 @@ object KmeansConcurrent {
         // Concurrent using recursivity
         val middle = s + (f-s)/2
         var firstMiddle = partialDistance(p, q, s, middle, 10)
-        var secondMiddle = partialDistance(p, q, middle, f, 10)
+        var secondMiddle = partialDistance(p, q, middle+1, f, 10)
         var r = firstMiddle + secondMiddle
         // return r
         r         
@@ -100,7 +159,7 @@ object KmeansConcurrent {
    }
 
    def euclDistance( p: Array[Double],  q: Array[Double] ): Double = {
-       partialDistance(p, q, 0, p.length, 10)    
+       partialDistance(p, q, 0, p.length, 3)    
    }
 
    def nearestCentroid(p: Array[Double], c: Array[Array[Double]]): (Int, Double) = {
@@ -128,7 +187,7 @@ object KmeansConcurrent {
       var j = nearestToCentroidClassification(i)._1 // a que cluster pertenece el punto
 
       for( s <- 0 to pointD -1 ){
-        acumCoord(j)(s) = acumCoord(j)(s) + pointsP(i)(s).toDouble
+        acumCoord(j)(s) += pointsP(i)(s).toDouble
       }
     }
     // println("Coordenadas Sumatoria antes de promedio")
@@ -144,7 +203,7 @@ object KmeansConcurrent {
     var nearestToCentroidClassification =  ArrayBuffer[(Int, Double)]()
     for (i <- 0 to pointsP.length -1){
       var neCe = nearestCentroid( pointsP(i), centroidsMatrix)
-      println(neCe)
+      // println(neCe)
       nearestToCentroidClassification += neCe
     }
     nearestToCentroidClassification
@@ -155,24 +214,24 @@ object KmeansConcurrent {
     var averageDistanceToCentroid = divideArrays( nearestCentroidDistanceAcum, howManyPointsBelongToCentroid ) 
     
     for( i <- 0 to averageDistanceToCentroid.length -1 ){
-     acum = acum + averageDistanceToCentroid(i)
+     acum += averageDistanceToCentroid(i)
     }
     acum
   }
 
   // Global  variables
-    //10 elements, numbers (1, 100)
-    val popuS = 15
+    //15 elements, numbers (0, 100)
+    val popuS = 1000
     val limit = 100
     val pointD = 10
     val k = 3
-    var pointsP = pointsPopulation(popuS, limit, pointD  )
-    val epsilon = 2.0
+    var pointsP = pointsPopulation(popuS, limit, pointD)
+    val epsilon = 0.00000001
 
   def main(args: Array[String]): Unit = {
     var centroidsMatrix = chooseCentroids(pointsP)
-    println(" Matrix of points")
-    printMatrixDouble(pointsP)
+    // println(" Matrix of points")
+    // printMatrixDouble(pointsP)
     println(" Matrix of centroids")
     printMatrixDouble(centroidsMatrix)
 
@@ -189,8 +248,8 @@ object KmeansConcurrent {
       
       for( i <- 0 to nearestToCentroidClassification.length -1 ){
         var j = nearestToCentroidClassification(i)._1 // Obtengo la posicion en la que debo sumar
-        nearestCentroidDistanceAcum(j) = nearestCentroidDistanceAcum(j) + nearestToCentroidClassification(i)._2
-        howManyPointsBelongToCentroid(j) = howManyPointsBelongToCentroid(j) + 1
+        nearestCentroidDistanceAcum(j) += nearestToCentroidClassification(i)._2
+        howManyPointsBelongToCentroid(j) += 1
       }
       println("Acum de dist  mas cercanas al centroide " + nearestCentroidDistanceAcum.mkString(" "))
       println("Cuantos puntos pertenecen al centroide " + howManyPointsBelongToCentroid.mkString(" "))
