@@ -160,7 +160,7 @@ object KmeansConcurrent {
    }
 
    def euclDistance( p: Array[Double],  q: Array[Double] ): Double = {
-       partialDistance(p, q, 0, p.length, 3)    
+       partialDistance(p, q, 0, p.length, p.length/2)    
    }
 
    def nearestCentroid(p: Array[Double], c: Array[Array[Double]]): (Int, Double) = {
@@ -222,7 +222,7 @@ object KmeansConcurrent {
 
   // Global  variables
     //15 elements, numbers (0, 100)
-    val popuS = 1000
+    val popuS = 1000000
     val limit = 100
     val pointD = 10
     val k = 3
