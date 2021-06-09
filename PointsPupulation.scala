@@ -29,9 +29,9 @@ object PointsPupulation{
       }
       matrixOfPoints
   }
-  val popuS = 5
+  val popuS = 1000
   val limit = 100
-  val pointD = 10
+  val pointD = 20000
   var pointsP = pointsPopulation(popuS, limit, pointD)
 
   def main(args: Array[String]): Unit = {

@@ -1,6 +1,11 @@
 import scala.collection.mutable.ArrayBuffer
-import scala.util.DynamicVariable
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
+import java.util.concurrent.RecursiveTask;
+import java.util.concurrent.ForkJoinWorkerThread
 import scala.io.Source
+
+import scala.util.DynamicVariable
 // K-means clustering is a clustering algorithm that aims to partition n observations into k clusters.
     // There are 3 steps:
     // Initialization – K initial “means” (centroids) are generated at random
@@ -9,7 +14,58 @@ import scala.io.Source
 
 // Initialization stage
 
-object KSerialV2 {
+object KmeansConcurrentV2 {
+
+  // Threads
+  val forkJoinPool = new ForkJoinPool
+
+  abstract class TaskScheduler{
+    def schedule[T](body: => T): ForkJoinTask[T]
+    def parallel[A, B](taskA: => A, taskB: => B): (A, B)={
+      val right = task {
+        taskB
+      }
+      val left = taskA
+      (left, right.join())
+    }
+  }
+
+  class DefaultTaskScheduler extends TaskScheduler {
+
+    def schedule[T](body: => T): ForkJoinTask[T] = {
+      val t = new RecursiveTask[T]{
+        def compute: T = body
+      }
+
+      Thread.currentThread match {
+        case wt: ForkJoinWorkerThread => 
+          t.fork()
+        case _ =>
+          forkJoinPool.execute(t)
+      }
+      t
+    }
+  }
+
+  val scheduler = new DynamicVariable[TaskScheduler](new DefaultTaskScheduler)
+
+  def task[T](body: => T): ForkJoinTask[T] = {
+    scheduler.value.schedule(body)
+  }
+
+  def parallel[A, B](taskA: => A, taskB: => B): (A, B) = {
+    scheduler.value.parallel(taskA, taskB)
+  }
+
+  def parallel[A, B, C, D](taskA: => A, taskB: => B, taskC: => C, taskD: => D): (A, B, C, D) = {
+    
+    val ta = task {taskA}
+    val tb = task {taskB}
+    val tc = task {taskC}
+    val td = task {taskD}
+    (ta.join(), tb.join(), tc.join(), td.join())
+
+  }
 
 
   // K-means 
@@ -61,7 +117,7 @@ object KSerialV2 {
       bufferedSource.close
       
       matrixOfPoints
-  }    
+  }   
 
   def chooseCentroids(matrixOfPoints:Array[ Array[Double]] ): Array[ Array[Double]]={
     var matrixOfCentroids = Array.ofDim[Double](k, pointD)
@@ -92,17 +148,20 @@ object KSerialV2 {
     }else{
         // Concurrent using recursivity
         val middle = s + (f-s)/2
-        var firstMiddle = partialDistance(p, q, s, middle, minLength)
-        var secondMiddle = partialDistance(p, q, middle+1, f, minLength)
-        var r = firstMiddle + secondMiddle
+        // var firstMiddle = partialDistance(p, q, s, middle, minLength)
+        // var secondMiddle = partialDistance(p, q, middle+1, f, minLength)
+        // var r = firstMiddle + secondMiddle
         // return r
-        r         
+        // r         
+        // or
+        val (x, y) = parallel(partialDistance(p,q, s, middle, minLength), partialDistance(p, q, middle+1, f, minLength) )
+        var z = x+y
+        math.sqrt(z)
     }
    }
 
    def euclDistance( p: Array[Double],  q: Array[Double] ): Double = {
-      var s =  partialDistance(p, q, 0, p.length, 3)    
-      math.sqrt(s)
+       partialDistance(p, q, 0, p.length,p.length/2 )    
    }
 
    def nearestCentroid(p: Array[Double], c: Array[Array[Double]]): (Int, Double) = {
@@ -163,7 +222,6 @@ object KSerialV2 {
   }
 
   // Global  variables
-    //15 elements, numbers (0, 100)
     val popuS = 1000
     val limit = 100
     val pointD = 20000
@@ -173,7 +231,7 @@ object KSerialV2 {
 
   def main(args: Array[String]): Unit = {
     var centroidsMatrix = chooseCentroids(pointsP)
-    println(" Matrix of points")
+    // println(" Matrix of points")
     // printMatrixDouble(pointsP)
     println(" Matrix of centroids")
     // printMatrixDouble(centroidsMatrix)

@@ -101,7 +101,7 @@ object KmeansSerial {
    }
 
    def euclDistance( p: Array[Double],  q: Array[Double] ): Double = {
-       partialDistance(p, q, 0, p.length, 3)    
+       partialDistance(p, q, 0, p.length, p.length/2)    
    }
 
    def nearestCentroid(p: Array[Double], c: Array[Array[Double]]): (Int, Double) = {
@@ -163,9 +163,9 @@ object KmeansSerial {
 
   // Global  variables
     //15 elements, numbers (0, 100)
-    val popuS = 1000000
+    val popuS = 1000
     val limit = 100
-    val pointD = 10
+    val pointD = 20000
     val k = 3
     var pointsP = pointsPopulation(popuS, limit, pointD)
     val epsilon = 0.00000001
@@ -175,7 +175,7 @@ object KmeansSerial {
     // println(" Matrix of points")
     // printMatrixDouble(pointsP)
     println(" Matrix of centroids")
-    printMatrixDouble(centroidsMatrix)
+    // printMatrixDouble(centroidsMatrix)
 
     var sseAnt = 0.0
     var done = false
@@ -193,8 +193,8 @@ object KmeansSerial {
         nearestCentroidDistanceAcum(j) += nearestToCentroidClassification(i)._2
         howManyPointsBelongToCentroid(j) += 1
       }
-      println("Acum de dist  mas cercanas al centroide " + nearestCentroidDistanceAcum.mkString(" "))
-      println("Cuantos puntos pertenecen al centroide " + howManyPointsBelongToCentroid.mkString(" "))
+      // println("Acum de dist  mas cercanas al centroide " + nearestCentroidDistanceAcum.mkString(" "))
+      // println("Cuantos puntos pertenecen al centroide " + howManyPointsBelongToCentroid.mkString(" "))
 
       // Calculate the average - error average
       var sse = totalError( nearestCentroidDistanceAcum, howManyPointsBelongToCentroid )
@@ -202,7 +202,7 @@ object KmeansSerial {
       println(sse)      
       centroidsMatrix = updateCentroidsMatrix(howManyPointsBelongToCentroid, nearestToCentroidClassification)
       println("New Centroids")
-      printMatrixDouble(centroidsMatrix)
+      // printMatrixDouble(centroidsMatrix)
       println("-------------------------------------------------")
 
       var error = (sse - sseAnt).abs
