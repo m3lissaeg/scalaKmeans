@@ -1,7 +1,7 @@
 import scala.collection.mutable.ArrayBuffer, scala.util.DynamicVariable, scala.io.Source
 
 object KMeansSerialMap{
-   val popuS = 30
+   val popuS = 300
    val limit = 100
    val pointD = 4
    val k = 3
@@ -62,11 +62,11 @@ object KMeansSerialMap{
     var pointsBelongToCluster = m.length
 
     for( i <- 0 to pointsBelongToCluster -1 ){
-      for( j <- 0 to pointD -1 ){
-        acumCoord(j) += m(i)(j)
+      acumCoord.view.zipWithIndex.foreach{
+        case (v,j) => acumCoord(j) += m(i)(j)
       }
     }
-    var newCe = acumCoord.map(x => x/pointsBelongToCluster)
+    var newCe = acumCoord.map(x => x/pointsBelongToCluster.toDouble)
     newCe
   }
 
@@ -90,19 +90,27 @@ object KMeansSerialMap{
 
   def main()(args: Array[String]): Unit = {
     //    val data = csvReader.readIris()
-       var data = pointsPopulation()
-       val centroids = chooseCentroids(data)
-       println("Centroids:")
-       centroids.foreach(p => println(pointToString(p)))
-       println("------------------")
-       val clusters = data.groupBy(x => nearestCentroid(x, centroids))
+    var sseAnt = 0.0
+    val epsilon = 0.00000001
+    var sse = 10.0
+    var data = pointsPopulation()
+    var centroids = chooseCentroids(data)
+    println("Centroids:")
+    centroids.foreach(p => println(pointToString(p)))
+    println("------------------")
+    var clusters = data.groupBy(x => nearestCentroid(x, centroids))
 
-       val sse = calculateError(clusters, centroids)
-       println("Error:" + sse)
+    while((sseAnt-sse).abs > epsilon){
+      sse = calculateError(clusters, centroids)
+      centroids = updateCentroidsMatrix(clusters)
+      println("New Centroids:")
+      centroids.foreach(p => println(pointToString(p)))
+      clusters = data.groupBy(x => nearestCentroid(x, centroids))
 
-       val newCentroids = updateCentroidsMatrix(clusters)
-       println("New Centroids:")
-       newCentroids.foreach(p => println(pointToString(p)))
+      sseAnt = sse
+      sse = calculateError(clusters, centroids)
+      println("Error:" + sse)
+    }
   }
 
 }
