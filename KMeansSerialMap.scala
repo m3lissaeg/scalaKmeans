@@ -1,7 +1,11 @@
-import scala.collection.mutable.ArrayBuffer, scala.util.DynamicVariable, scala.io.Source
+import scala.collection.mutable.ArrayBuffer, scala.util.DynamicVariable
+import scala.io.Source //scala.collection.parallel
+import scala.collection.parallel.immutable.ParMap
+import scala.collection.parallel.mutable.ParArray
+// libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.3"
 
 object KMeansSerialMap{
-   val popuS = 300
+   val popuS = 30
    val limit = 100
    val pointD = 4
    val k = 3
@@ -57,7 +61,7 @@ object KMeansSerialMap{
     matrixOfCentroids
   }
   
-  def calculateMatrixMean( m: Array[Array[Double]] ): Array[Double]={
+  def calculateMatrixMean( m: ParArray[Array[Double]] ): Array[Double]={
     var acumCoord = Array.ofDim[Double](pointD)
     var pointsBelongToCluster = m.length
 
@@ -70,7 +74,7 @@ object KMeansSerialMap{
     newCe
   }
 
-  def updateCentroidsMatrix( cl: Map[Int, Array[Array[Double]]] ): Array[Array[Double]]={
+  def updateCentroidsMatrix( cl: ParMap[Int, ParArray[Array[Double]]] ): Array[Array[Double]]={
     var newCentroids = Array.ofDim[Double](k, pointD)
     newCentroids.view.zipWithIndex.foreach{
       case (v,i) => newCentroids(i) = calculateMatrixMean(cl(i))         
@@ -78,12 +82,12 @@ object KMeansSerialMap{
     newCentroids
   }
 
-  def error(c: Array[Double], d: Array[Array[Double]]): Double={
+  def error(c: Array[Double], d: ParArray[Array[Double]]): Double={
     var e = d.map(s => euclDistance(c, s) )
     e.fold(0.0)((a, b) => a + b) / d.length.toDouble
   }
 
-  def calculateError( cl: Map[Int, Array[Array[Double]]] , centroids: Array[Array[Double]]): Double ={
+  def calculateError( cl: ParMap[Int, ParArray[Array[Double]]] , centroids: Array[Array[Double]]): Double ={
     val sse = cl.map(b => error(centroids(b._1), b._2))
     sse.fold(0.0)((a, b) => a + b)    
   }
@@ -98,14 +102,14 @@ object KMeansSerialMap{
     println("Centroids:")
     centroids.foreach(p => println(pointToString(p)))
     println("------------------")
-    var clusters = data.groupBy(x => nearestCentroid(x, centroids))
+    var clusters = data.par.groupBy(x => nearestCentroid(x, centroids))
 
     while((sseAnt-sse).abs > epsilon){
       sse = calculateError(clusters, centroids)
       centroids = updateCentroidsMatrix(clusters)
       println("New Centroids:")
       centroids.foreach(p => println(pointToString(p)))
-      clusters = data.groupBy(x => nearestCentroid(x, centroids))
+      clusters = data.par.groupBy(x => nearestCentroid(x, centroids))
 
       sseAnt = sse
       sse = calculateError(clusters, centroids)
