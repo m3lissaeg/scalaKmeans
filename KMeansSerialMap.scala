@@ -93,7 +93,7 @@ object KMeansSerialMap{
   }
 
   def main()(args: Array[String]): Unit = {
-    val t1 = System.nanoTime
+    var t1 = System.nanoTime
 
     var sseAnt = 0.0
     val epsilon = 0.00000001
@@ -121,9 +121,8 @@ object KMeansSerialMap{
       }
       sseAnt = sse
     }
+
+    val duration = (System.nanoTime - t1) / 1e9d
+    println("Time elapsed: " + duration)
   }
-
-  // val duration = (System.nanoTime - t1) / 1e9d
-  // println("Time elapsed: " + duration)
-
 }
