@@ -5,7 +5,7 @@ import scala.collection.parallel.mutable.ParArray
 // libraryDependencies += "org.scala-lang.modules" %% "scala-parallel-collections" % "1.0.3"
 
 object KMeansSerialMap{
-   val popuS = 30
+   val popuS = 300
    val limit = 100
    val pointD = 4
    val k = 3
@@ -93,7 +93,8 @@ object KMeansSerialMap{
   }
 
   def main()(args: Array[String]): Unit = {
-    //    val data = csvReader.readIris()
+    val t1 = System.nanoTime
+
     var sseAnt = 0.0
     val epsilon = 0.00000001
     var sse = 10.0
@@ -104,17 +105,25 @@ object KMeansSerialMap{
     println("------------------")
     var clusters = data.par.groupBy(x => nearestCentroid(x, centroids))
 
-    while((sseAnt-sse).abs > epsilon){
+    var done = false
+
+    while(!done){
       sse = calculateError(clusters, centroids)
+      println("Error:" + sse)
       centroids = updateCentroidsMatrix(clusters)
       println("New Centroids:")
       centroids.foreach(p => println(pointToString(p)))
+      println("---------")
       clusters = data.par.groupBy(x => nearestCentroid(x, centroids))
 
+      if ((sseAnt-sse).abs < epsilon){
+        done = true
+      }
       sseAnt = sse
-      sse = calculateError(clusters, centroids)
-      println("Error:" + sse)
     }
   }
+
+  // val duration = (System.nanoTime - t1) / 1e9d
+  // println("Time elapsed: " + duration)
 
 }
